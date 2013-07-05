@@ -2,7 +2,7 @@
 import os
 import sys
 from urllib2 import *
-import google
+from lib.google import *
 import random
 
 class GetFiles:

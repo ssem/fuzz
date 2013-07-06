@@ -7,56 +7,77 @@ from decimal import *
 class DownloadFiles:
     def __init__(self):
         self.proxy = None
-        self.downloadedCount = 0
 
-    def __call__(self, inputFile, outDirectory):
-        urlAndType = self.getUrls(inputFile)
-        self.seperateUrlAndType(urlAndType)
+    def __call__(self, inputFile, outDirect):
+        lines = self.getLines(inputFile)
+        urlsAndTypes = self.getUrlsAndTypes(lines)
+        for index, url in enumerate(urlsAndTypes):
+            outputFile=self.openFile(outDirect,urlsAndTypes[url],index)
+            if not self.download(url, outputFile):
+                self.removeBadFile(outDirect,urlsAndTypes[url],index)
+            self.printStatus(index, len(urlsAndTypes))
 
-    def getUrls(self, inputFile):
-        urlAndType = []
+    def printStatus(self, index, total):
+        percent = Decimal(index) / Decimal(total)
+        os.system('clear')
+        print 'Downloading File: {Count} of {Total}\
+        {Percent:.2%}'.format(Count=index,Total=total,Percent=percent)
+
+    def getLines(self, inputFile):
+        lines = []
         f = open(inputFile, 'r')
         for line in f:
             if 'http://' in line and '.'+line[:line.find(':')] in line[-10:]:
-                urlAndType.append(line.rstrip('\n'))
+                lines.append(line.rstrip('\n'))
         f.close()
-        return urlAndType
+        return lines
 
-    def seperateUrlAndType(self, line):
-        for line in urlAndType:
+    def getUrlsAndTypes(self, lines):
+        urlsAndTypes = {}
+        for line in lines:
             fileType = line[:line.find(':')]
             url = line[line.find('http'):]
-                if fileType != '' and len(fileType) < 6:
-                    return (fileType, url)
-                else:return None
-
-    def openFileForDownload(self, outputDirectory, filetype):
-        try:
-            f = open(outputDirectory+fileType+'/'+str(self.downloadedCount)+'.'+fileType, 'w+')
-        except IOError:
-            os.makedirs(outputDirectory+fileType)
-            f = open(outputDirectory+fileType+'/'+\str(self.downloadedCount)+'.'+fileType, 'w+')
-
-    def download(self, outputDirectory):
             if fileType != '' and len(fileType) < 6:
-                self.openFileForDownload(ouputDirectory, filetype)
-                response = self.getResponse(url)
-                download = self.getPage(response)
-                if download:
-                    downloaded += 1
-                    if (count % 7) == 0:
-                        os.system('clear')
-                        percent = Decimal(count) / Decimal(total)
-                        print 'Downloading File: {Count} of {Total}\
-                        {Percent:.2%}'.format(Count=count,Total=total,\
-                        Percent=percent)
-                    try:
-                        f.write(download)
-                        f.close()
-                    except:
-                        f.close()
-                        os.remove(outputDirectory+fileType+'/'+\
-                        str(downloaded)+'.'+fileType)
+                urlsAndTypes[url]=fileType
+        return urlsAndTypes
+
+    def openFile(self, outDirectory, fileType, count):
+        if not outDirectory.endswith('/'):
+            outDirectory = outDirectory+'/'
+        try:
+            f = open(outDirectory+fileType+'/'+str(count)+'.'+fileType, 'w+')
+        except IOError:
+            os.makedirs(outDirectory+fileType)
+            f = open(outDirectory+fileType+'/'+str(count)+'.'+fileType, 'w+')
+        return f
+
+    def download(self, url, outputFile):
+        response = self.getResponse(url)
+        if self.filterBasedOnSize(response):
+            download = self.getPage(response)
+            if download:
+                try:
+                    outputFile.write(download)
+                    outputFile.close()
+                    return True
+                except:pass
+        outputFile.close()
+        return False
+
+    def filterBasedOnSize(self, response):
+        header = self.getHeader(response)
+        if header:
+            for line in header.split('\n'):
+                if 'Content-Length' in line:
+                    length = line.split(': ')[1]
+                    if int(length) < 1000000: return True
+        return False
+
+    def removeBadFile(self, outDirectory, fileType, count):
+        try:
+            os.remove(outDirectory+fileType+'/'+str(count)+'.'+fileType)
+        except:
+            os.remove(outDirectory+'/'+fileType+'/'+str(count)+'.'+fileType)
 
     def getResponse(self, url):
         try:
@@ -70,16 +91,19 @@ class DownloadFiles:
         except: return None
 
     def getHeader(self, response):
-        return str(response.info())
+        try:
+            return str(response.info())
+        except: return None
 
     def getUrl(self, response):
-        return str(response.geturl())
+        try:
+            return str(response.geturl())
+        except: return None
 
     def getPage(self, response):
         try:
-            response = str(response.read())
-        except: pass
-        return response
+            return str(response.read())
+        except: return None
 
 
 if __name__=='__main__':

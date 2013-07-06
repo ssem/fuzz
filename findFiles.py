@@ -2,80 +2,108 @@
 import os
 import sys
 from urllib2 import *
-from lib.google import *
+from lib import google
 import random
 
 class GetFiles:
-    def __init__(self, dictionary, output, port=80, proxy=False):
+    def __init__(self, port=80, proxy=False):
         self.port = port
         self.proxy = proxy
-        self.output = open(output, 'w+')
-        self.inputFile = open(dictionary, 'r')
-
-    def run(self):
-        count = 0
-        totalItemsFound = 0
-        urls, total = self.getUrlsAndTotalCount()
-        for url in urls:
-            count += 1
-            os.system('clear')
-            print 'Parsing Urls: '+str(count)+' of '+str(total)+'      #'+str(totalItemsFound)
-            response = self.getResponse(url)
-            if response:
-                page = self.getPage(response)
-                domain = self.getUrl(response)
-                totalItemsFound += self.filterPage(page, domain)
-        self.output.close()
-
-    def getUrlsAndTotalCount(self):
-        words = []
-        urls = []
-        totalWords = 0
-        totalUrls = 0
-        print 'Loading Dictionary file'
-        for item in self.inputFile:
-            totalWords += 1
-            words.append(item)
-        self.inputFile.close()
-        for numberOfSearchesToPreform in xrange(100):
-            searchString = ''
-            for numberOfWordsForSearching in xrange(random.randrange(1,2)):
-                searchString += words[random.randrange(1,totalWords)].rstrip('\n')+' '
-            try:
-                googleResults = google.search(str(searchString),stop=1)
-                for googleResult in googleResults:
-                    totalUrls += 1
-                    urls.append(googleResult)
-            except: pass
-            os.system('clear')
-            print 'Acquiring Urls      # '+str(totalUrls)
-        return (urls, totalUrls)
-
-    def filterPage(self, page, domain):
-        count = 0
-        fileTypes = ['.css','.pdf','.webarchive','.webbookmark','.webhistory','.webloc',\
+        self.fileTypes = ['.css','.pdf','.webarchive','.webbookmark','.webhistory','.webloc',\
         '.download','.safariextz','.gif','.htm','.js','.jpg','.jpeg','.jp2','.txt','.text',\
         '.png','.tif','.url','.ico','.xhtml','.xht','.xml','.xbl','.xbl','.svg']
+
+    def __call__(self, dictionary, output):
+        totalFoundItems = 0
+        os.system('clear')
+        print '[ Loading Dictionary ]'
+        words = self.getRandomWords(dictionary)
+        for x in xrange(100):
+            print '\n[ Round %s of 100 ]' % (x+1)
+            searchString = self.makeSearchString(words)
+            print '[ Getting Search Results For %s ]' % searchString
+            urls = self.getUrls(searchString)
+            print '    - [ Found %s Urls ]' % len(urls)
+            pages = self.getPage(urls)
+            foundItems = self.filterPages(pages)
+            print '    - [ Found %s Items ]' % len(foundItems)
+            totalFoundItems += len(foundItems)
+            print '    - [ Total %s ]' % totalFoundItems
+            self.saveToFile(foundItems, output)
+
+    def saveToFile(self, foundItems, output):
         try:
-            items = page.split(' ')
-        except AttributeError: pass
-        for item in items:
-            for fileType in fileTypes:
-                if fileType in item.lower():
-                    if '"' in item.lower():
-                        item = item[item.find('"')+1:]
-                        item = item[:item.find('"')]
-                    elif "'" in item.lower():
-                        item = item[item.find("'")+1:]
-                        item = item[:item.find("'")]
-                    if len(item) > 4:
-                        if item.startswith('http:'):
-                            foundItem = fileType.lstrip('.')+': '+item
-                        else:
-                            foundItem = fileType.lstrip('.')+': '+domain+item
-                        count += 1
-                        self.output.write(foundItem+'\n')
-        return count
+            f = open(output, 'a')
+            for item in foundItems:
+                f.write(item+'\n')
+            f.close()
+        except Exception as e:
+            print e
+
+    def getPage(self, urls):
+        pages = {}
+        for url in urls:
+            response = self.getResponse(url)
+            domain = self.getUrlFromResponse(response)
+            if response:
+                pages[self.getPageFromResponse(response)] = domain
+        return pages
+
+    def getRandomWords(self, dictionary):
+        words = []
+        f = open(dictionary, 'r')
+        for item in f:
+            words.append(item)
+        f.close()
+        if len(words) < 1:
+            print '\n\tUsage: findFiles.py      < path to dictionary>    < outfile >\n'
+            exit()
+        return words
+
+    def makeSearchString(self, words):
+        searchString = ''
+        for x in xrange(random.randrange(1,3)):
+            searchString += words[random.randrange(1,len(words))].rstrip('\n')+' '
+        return searchString.rstrip(' ')
+
+    def getUrls(self, searchString):
+        try:
+            urls = []
+            googleResults = google.search(str(searchString),stop=1)
+            for item in googleResults:
+                urls.append(item)
+            return urls
+        except:return None
+
+    def filterPages(self, pages):
+        foundItems = []
+        for page in pages:
+            try:
+                items = page.split(' ')
+                domain = pages[page]
+                for item in items:
+                    for fileType in self.fileTypes:
+                        foundItem = self.filterPage(fileType, item, domain)
+                        if foundItem:
+                            foundItems.append(foundItem)
+            except AttributeError: pass
+        return foundItems
+
+    def filterPage(self, fileType, item, domain):
+        foundItem = None
+        if fileType in item.lower():
+            if '"' in item.lower():
+                item = item[item.find('"')+1:]
+                item = item[:item.find('"')]
+            elif "'" in item.lower():
+                item = item[item.find("'")+1:]
+                item = item[:item.find("'")]
+            if len(item) > 4:
+                if item.startswith('http:'):
+                    foundItem = fileType.lstrip('.')+': '+item
+                else:
+                    foundItem = fileType.lstrip('.')+': '+domain+item
+        return foundItem
 
     def getResponse(self, url):
         try:
@@ -91,22 +119,25 @@ class GetFiles:
         except URLError as e:
             return None
 
-    def getHeader(self, response):
-        return str(response.info())
-
-    def getUrl(self, response):
-        return str(response.geturl())
-
-    def getPage(self, response):
+    def getHeaderFromResponse(self, response):
         try:
-            response = str(response.read())
-        except: pass
-        return response
+            return str(response.info())
+        except: return None
+
+    def getUrlFromResponse(self, response):
+        try:
+            return str(response.geturl())
+        except: return None
+
+    def getPageFromResponse(self, response):
+        try:
+            return str(response.read())
+        except: return None
 
 if __name__=='__main__':
     try:
-        test = GetFiles(sys.argv[1], sys.argv[2])
-        test.run()
+        test = GetFiles()
+        test(sys.argv[1], sys.argv[2])
     except IndexError:
         print '\n\tUsage: findFiles.py      < path to dictionary>    < outfile >\n'
 

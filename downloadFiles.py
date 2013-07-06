@@ -9,7 +9,7 @@ class DownloadFiles:
         self.proxy = None
         self.downloadedCount = 0
 
-    def run (self, inputFile, outDirectory):
+    def __call__(self, inputFile, outDirectory):
         urlAndType = self.getUrls(inputFile)
         self.seperateUrlAndType(urlAndType)
 
@@ -85,7 +85,7 @@ class DownloadFiles:
 if __name__=='__main__':
     try:
         test = DownloadFiles()
-        test.run(sys.argv[1], sys.argv[2])
+        test(sys.argv[1], sys.argv[2])
     except IndexError:
         print '\n\tUsage: downloadFile    < Input File >    < Output Directory>\n'
 

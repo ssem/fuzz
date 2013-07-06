@@ -77,7 +77,10 @@ class DownloadFiles:
         try:
             os.remove(outDirectory+fileType+'/'+str(count)+'.'+fileType)
         except:
-            os.remove(outDirectory+'/'+fileType+'/'+str(count)+'.'+fileType)
+            try:
+                os.remove(outDirectory+'/'+fileType+'/'+str(count)+\
+                '.'+fileType)
+            except:pass
 
     def getResponse(self, url):
         try:

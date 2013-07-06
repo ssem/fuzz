@@ -37,8 +37,7 @@ class GetFiles:
             for item in foundItems:
                 f.write(item+'\n')
             f.close()
-        except Exception as e:
-            print e
+        except: pass
 
     def getPage(self, urls):
         pages = {}
@@ -114,10 +113,7 @@ class GetFiles:
                 opener = build_opener()
             opener.addheaders = [('User-agent', 'Mozilla/5.0')]
             return opener.open(str(url))
-        except HTTPError as e:
-            return None
-        except URLError as e:
-            return None
+        except Exception:return None
 
     def getHeaderFromResponse(self, response):
         try:

@@ -21,8 +21,8 @@ class combineCollects:
 
     def renameFiles(self, filePaths, output):
         for index, filePath in enumerate(filePaths):
+            d = filePath.split('/')[-2]
             try:
-                d = filePath.split('/')[-2]
                 os.rename(filePath, '%s/%s/%s.%s'% (output,d,index,d))
             except OSError as e:
                 os.mkdir(output+'/'+d)
@@ -47,4 +47,4 @@ if __name__=='__main__':
         combine = combineCollects()
         combine(sys.argv[1:-1], sys.argv[-1])
     except IndexError:
-        print '\n\tUsage:  python combineCollects.py  < collects .. > < output directory>\n'
+        print '\n\tUsage: combineCollects.py  < collects .. > < output directory>\n'

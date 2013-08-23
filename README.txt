@@ -3,7 +3,7 @@
 # short explination
 #
 #   1. install python
-#   2. python bfg9000.py -g
+#   2. python bfg9000.py -h
 #
 #
 #

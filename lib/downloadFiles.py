@@ -18,8 +18,7 @@ class DownloadFiles:
                 filename = '%s.%s' % (str(count), fileType)
                 path = os.path.join(outDirect, fileType)
                 count += 1
-                try:
-                    os.makedirs(path)
+                try:os.makedirs(path)
                 except: pass
                 f = open(os.path.join(path, filename), 'w+')
                 f.write(data)

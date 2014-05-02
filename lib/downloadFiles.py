@@ -19,9 +19,11 @@ class DownloadFiles:
 
     def printStatus(self, index, total):
         percent = Decimal(index) / Decimal(total)
-        os.system('clear')
-        print 'Downloading File: {Count} of {Total}\
-        {Percent:.2%}'.format(Count=index,Total=total,Percent=percent)
+        message = 'Downloading Files: {Percent:.2%}'.format(
+            Count=index,Total=total,Percent=percent)
+        sys.stdout.write(message)
+        sys.stdout.flush()
+        sys.stdout.write('\b' * len(message))
 
     def getLines(self, inputFile):
         lines = []
@@ -81,7 +83,7 @@ class DownloadFiles:
                 os.remove(outDirectory+'/'+fileType+'/'+str(count)+\
                 '.'+fileType)
             except:pass
-
+    
     def getResponse(self, url):
         try:
             if self.proxy:
@@ -92,17 +94,17 @@ class DownloadFiles:
             opener.addheaders = [('User-agent', 'Mozilla/5.0')]
             return opener.open(str(url))
         except: return None
-
+    
     def getHeader(self, response):
         try:
             return str(response.info())
         except: return None
-
+    
     def getUrl(self, response):
         try:
             return str(response.geturl())
         except: return None
-
+    
     def getPage(self, response):
         try:
             return str(response.read())

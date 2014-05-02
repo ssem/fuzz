@@ -15,21 +15,20 @@ class FindFiles:
 
     def __call__(self, dictionary, output, rounds=1):
         totalFoundItems = 0
-        os.system('clear')
         print '[ Loading Dictionary ]'
         words = self.getRandomWords(dictionary)
-        for x in xrange(rounds):
-            print '\n[ Round %s of rounds %s]' % (str(x+1), str(rounds))
+        for x in xrange(int(rounds)):
+            print '[ Round %s of %s]' % (str(x+1), str(rounds))
             searchString = self.makeSearchString(words)
-            print '[ Getting Search Results For %s ]' % searchString
+            print '    - [ Searching For %s ]' % searchString
             urls = self.getUrls(searchString)
             print '    - [ Found %s Urls ]' % len(urls)
             pages = self.getPage(urls)
             foundItems = self.filterPages(pages)
             print '    - [ Found %s Items ]' % len(foundItems)
             totalFoundItems += len(foundItems)
-            print '    - [ Total %s ]' % totalFoundItems
-            self.saveToFile(foundItems, output)
+        print '[ Total %s Items]' % totalFoundItems
+        self.saveToFile(foundItems, output)
 
     def saveToFile(self, foundItems, output):
         try:

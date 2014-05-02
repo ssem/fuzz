@@ -1,0 +1,45 @@
+#!/usr/bin/env python
+import os
+import sys
+import shutil
+import argparse
+from lib.findFiles import FindFiles
+from lib.downloadFiles import DownloadFiles
+from lib.combineCollects import CombineCollects
+
+class Scrape:
+    def __init__(self):
+        self.find = FindFiles()
+        self.download = DownloadFiles()
+        self.combine = CombineCollects()
+
+    def scrape(self, dictionary, output, rounds):
+        self.find(dictionary, '/tmp/Scrape', rounds)
+        self.download('/tmp/Scrape', output)
+
+    def combine(self, dirs, output):
+        self.combin(dirs, output)
+
+    def __del__(self):
+        try: os.remove('/tmp/Scrape')
+        except: pass
+
+if __name__=='__main__':
+    parse = argparse.ArgumentParser()
+    parse.add_argument('output', help='output directory',
+        metavar=('dir'))
+    parse.add_argument('-r', help='perform N rounds (DEFAULT: 1)',
+        dest='rounds', metavar=('rnds'), default=1)
+    parse.add_argument('-d', help='dictionary (DEFAULT: lib/dict.txt)',
+        default='lib/dict.txt', dest='dictionary', metavar=('dict')) 
+    parse.add_argument('-c', nargs='*', help='combine collects',
+        metavar=('dir'), dest='combine')
+    if len(sys.argv) < 2:
+        parse.print_help()
+        exit()
+    args = parse.parse_args()
+    scrape = Scrape()
+    if args.combine:
+        scrape.combine(args.combine, args.output)
+    else:
+        scrape.scrape(args.dictionary, args.output, args.rounds)

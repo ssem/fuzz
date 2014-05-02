@@ -21,8 +21,9 @@ class Scrape:
         self.combin(dirs, output)
 
     def __del__(self):
-        try: os.remove('/tmp/Scrape')
-        except: pass
+        pass
+        #try: os.remove('/tmp/Scrape')
+        #except: pass
 
 if __name__=='__main__':
     parse = argparse.ArgumentParser()

@@ -45,6 +45,9 @@ if __name__ == '__main__':
         help='run process for T sec (DEFAULT: 5)')
     parse.add_argument('-n', dest='limit', default=5,
         help='limit to N processes (DEFAULT: 5)')
+    if len(sys.argv) < 2:
+        parse.print_help()
+        exit()
     args = parse.parse_args()
     fuzz = Fuzz()
     fuzz.start(args.cmd, args.time, args.limit, args.in_files)

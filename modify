@@ -1,0 +1,82 @@
+#!/usr/bin/env python
+import os
+import sys
+import string
+import random
+import argparse
+
+
+class Modify:
+    def __init__(self, path):
+        self.files = list(self._find_files(path))
+        self.chars = string.printable + string.whitespace
+
+    def _find_files(self, path):
+        for start, dirs, filenames in os.walk(os.path.expanduser(path)):
+            for filename in filenames:
+                yield os.path.join(start, filename)
+
+    def one(self):
+         for filename in self.files:
+            f = list(open(filename, 'r'))
+            count = 0
+            for line in f:
+                n = random.randint(0, len(line))
+                x = random.randint(0, 6)
+                mod = line[:n] + ''.join(random.sample(self.chars, x)) + line[n:] 
+                f[count] = mod
+                count += 1
+            r = open(filename + '_1', 'w')
+            for line in f:
+                r.write(line)
+            r.close()
+
+    def two(self):
+        for filename in self.files:
+            f = list(open(filename, 'r'))
+            count = 0
+            for line in f:
+                n = random.randint(0, len(line))
+                mod = line[:n] + str(hex(random.randint(0, 10000))) + line[n:] 
+                f[count] = mod
+                count += 1
+            r = open(filename + '_2', 'w')
+            for line in f:
+                r.write(line)
+            r.close()
+
+    def three(self):
+        for filename in self.files:
+            f = list(open(filename, 'r'))
+            count = 0
+            for line in f:
+                n = random.randint(0, len(line))
+                x = random.randint(n, len(line))
+                f[count] = line[:n] + line[x:] 
+                count += 1
+            r = open(filename + '_3', 'w')
+            for line in f:
+                r.write(line)
+            r.close()
+
+if __name__ == '__main__':
+    parse = argparse.ArgumentParser()
+    parse.add_argument('path', help='input directory',
+        metavar=('path'))
+    parse.add_argument('-1', action='store_true', help='add chars',
+        dest='one')
+    parse.add_argument('-2', action='store_true', help='add hex',
+        dest='two')
+    parse.add_argument('-3', action='store_true', help='remove rand',
+        dest='three')
+    if len(sys.argv) < 2:
+        parse.print_help()
+        exit()
+    args = parse.parse_args()
+    modify = Modify(args.path)
+    if args.one:
+        modify.one()
+    if args.two:
+        modify.two()
+    if args.three:
+        modify.three()

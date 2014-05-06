@@ -9,8 +9,7 @@ from subprocess import Popen, PIPE
 def worker((cmd, tyme)):
     process = Popen(cmd, stdout=PIPE, stderr=PIPE)
     time.sleep(int(tyme))
-    if process.poll() > 0:
-        print cmd, tyme
+    print '%s %s %s' % (process.poll(), cmd, tyme)
     try:
         process.kill()
     except: pass
@@ -19,9 +18,6 @@ def worker((cmd, tyme)):
     except: pass
 
 class Fuzz:
-    def __init__(self):
-        pass
-
     def start(self, cmd, tyme, limit, in_files=None): 
         pool = multiprocessing.Pool(int(limit))
         jobs = self._create_cmds(cmd, tyme, in_files)
@@ -31,9 +27,10 @@ class Fuzz:
         cmds = ()
         if in_files:
             in_files = os.path.expanduser(in_files)
-            for f in os.listdir(in_files):
-                file_name = os.path.join(in_files, f)
-                cmds += ([cmd.replace('#if', file_name).split(' '),tyme],)
+            for path, dirs, files in os.walk(in_files):
+                for f in files:
+                    file_name = os.path.join(path, f)
+                    cmds += ([cmd.replace('#if', file_name).split(' '),tyme],)
         return cmds
 
 if __name__ == '__main__':

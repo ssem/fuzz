@@ -1,0 +1,78 @@
+#!/usr/bin/env python
+import os
+import sys
+import time
+import string
+import argparse
+import itertools
+import multiprocessing 
+from subprocess import Popen, PIPE
+
+def worker((cmd, output, timeout)):
+    try:
+        process = Popen(cmd, stdout=PIPE, stderr=PIPE)
+        time.sleep(int(timeout))
+        status = process.poll()
+        if status:
+            f = open(output)
+            f.write('%s %s' % (status, ' '.join(cmd)))
+        print '%s %s' % (status, ' '.join(cmd))
+        try:
+            process.kill()
+        except: pass
+        try:
+            process.terminate()
+        except: pass
+    except Exception as error:
+        f = open(output)
+        f.write('Fatal %s' % ' '.join(cmd))
+        print 'Fatal %s' % ' '.join(cmd)
+
+class Fuzz:
+    def start(self, output, cmd, timeout, threads, path, chars, minC, maxC): 
+        f = open(output, 'w+')
+        f.close()
+        pool = multiprocessing.Pool(int(threads))
+        for cmd in self._path_cmds(cmd, output, timeout, path):
+            pool.map(worker, (cmd,))
+        for cmd in self._char_cmds(cmd, output, timeout, chars, minC, maxC):
+            pool.map(worker, (cmd,))
+
+    def _path_cmds(self, cmd, output, timeout, path):
+        orig_path = os.path.expanduser(path)
+        for path, dirs, files in os.walk(orig_path):
+            for f in files:
+                file_name = os.path.join(path, f)
+                yield [cmd.replace('#p', file_name).split(' '), output, timeout]
+    
+    def _char_cmds(self, cmd, output, timeout, chars, minC, maxC):
+        for x in xrange(int(minC), int(maxC)):
+            for y in itertools.permutations(chars, x):
+                yield [cmd.replace('#c', ''.join(y)).split(' '), output, timeout]
+
+if __name__ == '__main__':
+    parse = argparse.ArgumentParser()
+    parse.add_argument('cmd', help='cmd to run')
+    parse.add_argument('output', help='output file')
+    parse.add_argument('-a', help='replace #c with ascii', action='store_true')
+    parse.add_argument('-d', help='replace #c with digits', action='store_true')
+    parse.add_argument('-s', help='replace #c with specials', action='store_true')
+    parse.add_argument('-p', help='replace #p with file path', metavar=('DIR'))
+    parse.add_argument('-minC', help='min length #c (DEFAULT:1)', default=1)
+    parse.add_argument('-maxC', help='max length #c (DEFAULT:100)', default=100)
+    parse.add_argument('-timeout', help='timeout (DEFAULT:2)', default=2)
+    parse.add_argument('-threads', help='threads (DEFAULT:1)', default=1)
+    if len(sys.argv) < 2:
+        parse.print_help()
+        exit()
+    args = parse.parse_args()
+    chars = ''
+    if args.a:
+        chars += string.ascii_letters
+    if args.d:
+        chars += string.digits
+    if args.s:
+        chars += string.punctuation + string.whitespace
+    fuzz = Fuzz()
+    fuzz.start(args.output, args.cmd, args.timeout, args.threads, args.p, chars, 
+        args.minC, args.maxC)

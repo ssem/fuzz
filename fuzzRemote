@@ -1,0 +1,106 @@
+#!/usr/bin/env python
+import sys
+import string
+import argparse
+import itertools
+import urllib
+import multiprocessing
+from urllib2 import *
+
+class Proxy_Client:
+    def __call__(self, protocal='http', address='127.0.0.1:8080'):
+        return ProxyHandler({protocal: address})
+
+class Http_Client:
+    def __init__(self):
+        self.url = ''
+        self.header = ''
+        self._opener = None
+        self._header_info = {}
+
+    def set_properties(self, header_info, proxy):
+        if proxy:
+            proxy = Proxy_Client('http', proxy)
+            opener = build_opener(proxy)
+        else:
+            opener = build_opener()
+        self._header_info = header_info
+        self._opener = opener
+
+    def get(self, url, data, timeout):
+        try:
+            if type(data) == dict: data = urllib.urlencode(data)
+            elif data != None: data = urllib.quote_plus(data)
+            request = Request(str(url), data, self._header_info)
+            response = self._opener.open(request, timeout=timeout)
+            self.header = str(response.info())
+            self.url = str(response.geturl())
+            return str(response.code)
+        except UrlError:
+            return 'invalid url '
+        except Exception as error:
+            return 'Fatal %s ' % error
+
+def worker((url, data, header, timeout, proxy, output)):
+    http_client = Http_Client()
+    http_client.set_properties(header, proxy)
+    code = http_client.get(url, data, timeout)
+    print '%s %s' % (code, url)
+
+class Fuzz:
+    def start(self, output, url, data, chars, minC, maxC, header_info, timeout, proxy, threads):
+        pool = multiprocessing.Pool(int(threads))
+        for cmd in self._char_cmds(output, url, data, chars, minC, maxC, header_info, timeout, proxy):
+            pool.map(worker, (cmd,))
+
+    def _char_cmds(self, output, url, data, chars, minC, maxC, header_info, timeout, proxy):
+        tmp_data = None
+        for x in xrange(int(minC), int(maxC)):
+            for y in itertools.permutations(chars, x):
+                fuzz = ''.join(y)
+                tmp_url = url.replace('#c', fuzz)
+                tmp_header = self.convert(header_info, fuzz)
+                if data:
+                    tmp_data = self.convert(data, fuzz)
+                yield [tmp_url, tmp_data, tmp_header, timeout, proxy, output]
+    
+    def convert(self, line, fuzz):
+        dic = {}
+        for x in line.split(','):
+            key, value = x.split(':')
+            key = key.replace('#c', fuzz)
+            value = value.replace('#c', fuzz)
+            dic[key] = value
+        return dic
+
+if __name__ == '__main__':
+    parse = argparse.ArgumentParser()
+    parse.add_argument('url', help='target address')
+    parse.add_argument('output', help='output file')
+    parse.add_argument('-a', help='replace #c with ascii', action='store_true')
+    parse.add_argument('-d', help='replace #c with digits', action='store_true')
+    parse.add_argument('-s', help='replace #c with specials', action='store_true')
+    #parse.add_argument('-f', help='replace #f with file path', metavar=('DIR'))
+    parse.add_argument('-maxC', help='max length (DEFAULT:100)', default=100)
+    parse.add_argument('-minC', help='min length (DEFAULT:1)', default=1)
+    parse.add_argument('-header', default='User-agent:Mozilla/5.0',
+        help='comma seperated header info ex. User-agent:Mozilla')
+    parse.add_argument('-post', help='include post data', default=None)
+    parse.add_argument('-timeout', help='timeout (DEFAULT:1)', default=1)
+    parse.add_argument('-proxy', help='proxy address', default=None)
+    parse.add_argument('-threads', help='threads (DEFAULT:1)', default=1)
+    if len(sys.argv) < 2:
+        parse.print_help()
+        exit()
+    args = parse.parse_args()
+    chars = ''
+    if args.a:
+        chars += string.ascii_letters
+    if args.d:
+        chars += string.digits
+    if args.s:
+        chars += string.punctuation + string.whitespace
+    fuzz = Fuzz()
+    fuzz.start(args.output, args.url, args.post, chars, args.minC, args.maxC,
+        args.header, args.timeout, args.proxy, args.threads)
+

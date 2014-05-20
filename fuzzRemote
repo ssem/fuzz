@@ -4,6 +4,7 @@ import string
 import argparse
 import itertools
 import urllib
+import urllib2
 import multiprocessing
 from urllib2 import *
 
@@ -36,10 +37,8 @@ class Http_Client:
             self.header = str(response.info())
             self.url = str(response.geturl())
             return str(response.code)
-        except UrlError:
-            return 'invalid url '
         except Exception as error:
-            return 'Fatal %s ' % error
+            return error.reason
 
 def worker((url, data, header, timeout, proxy, output)):
     http_client = Http_Client()
@@ -49,6 +48,8 @@ def worker((url, data, header, timeout, proxy, output)):
 
 class Fuzz:
     def start(self, output, url, data, chars, minC, maxC, header_info, timeout, proxy, threads):
+        if not url.startswith('http://'):
+            url = 'http://' + url
         pool = multiprocessing.Pool(int(threads))
         for cmd in self._char_cmds(output, url, data, chars, minC, maxC, header_info, timeout, proxy):
             pool.map(worker, (cmd,))
@@ -56,7 +57,7 @@ class Fuzz:
     def _char_cmds(self, output, url, data, chars, minC, maxC, header_info, timeout, proxy):
         tmp_data = None
         for x in xrange(int(minC), int(maxC)):
-            for y in itertools.permutations(chars, x):
+            for y in itertools.combinations_with_replacement(chars, x):
                 fuzz = ''.join(y)
                 tmp_url = url.replace('#c', fuzz)
                 tmp_header = self.convert(header_info, fuzz)
@@ -74,15 +75,15 @@ class Fuzz:
         return dic
 
 if __name__ == '__main__':
-    parse = argparse.ArgumentParser()
+    parse = argparse.ArgumentParser(description='Ex: ./fuzzRemote -a -d -s 192.168.1.1/#c:80 output')
     parse.add_argument('url', help='target address')
     parse.add_argument('output', help='output file')
     parse.add_argument('-a', help='replace #c with ascii', action='store_true')
     parse.add_argument('-d', help='replace #c with digits', action='store_true')
     parse.add_argument('-s', help='replace #c with specials', action='store_true')
     #parse.add_argument('-f', help='replace #f with file path', metavar=('DIR'))
-    parse.add_argument('-maxC', help='max length (DEFAULT:100)', default=100)
     parse.add_argument('-minC', help='min length (DEFAULT:1)', default=1)
+    parse.add_argument('-maxC', help='max length (DEFAULT:100)', default=100)
     parse.add_argument('-header', default='User-agent:Mozilla/5.0',
         help='comma seperated header info ex. User-agent:Mozilla')
     parse.add_argument('-post', help='include post data', default=None)

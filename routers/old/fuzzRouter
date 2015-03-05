@@ -1,0 +1,90 @@
+#!/usr/bin/env python
+import os
+import sys
+import argparse
+from lib.scan import Scan
+from lib.http import Http
+import multiprocessing
+
+def verbose(string):
+    sys.stderr.write('%s\n' % string)
+
+def silent(string):
+    pass
+
+def tcp_worker((ip, port, firmware, verbose, output)):
+    if port == 21:
+       output.write('scan', 'Ftp: %s\n' % port)
+    elif port == 22:
+        output.write('scan', 'Ssh: %s\n' % port)
+    elif port == 23:
+        output.write('scan', 'Telnet: %s\n' % port)
+    elif port == 25:
+        output.write('scan', 'Smtp: %s\n' % port)
+    elif port == 53:
+        output.write('scan', 'Dns: %s\n' % port)
+    elif port == 69:
+        output.write('scan', 'Tftp: %s\n' % port)
+    elif port == 80 or port == 8080:
+        output.write('scan', 'Http: %s\n' % port)
+        http = Http(ip, port, firmware, verbose)
+        for path in http.find_valid_paths():
+            output.write('http', '%s\n' % path)
+    elif port == 107:
+        output.write('scan', 'Rtelnet: %s\n' % port)
+    elif port == 110:
+        output.write('scan', 'Pop: %s\n' % port)
+    elif port == 118 or port == 156:
+        output.write('scan', 'Sql: %s\n' % port)
+    elif port == 124:
+        output.write('scan', 'Ntp: %s\n' % port)
+
+class Output:
+    def __init__(self):
+        self.results = {}
+
+    def write(self, kind, result):
+        if kind in self.results.keys():
+            self.results[kind] = self.results[kind] + result
+        else:
+            self.results[kind] = result
+
+    def stdout(self):
+        for result in self.results:
+            sys.stdout.write(self.results[result])
+
+    def file(self, fname):
+        f = open(fname, 'w+')
+        for result in self.results:
+            f.write(self.results[result])
+        f.close()
+
+class Fuzz:
+    def start(self, ip, firmware, verbose, fname):
+        output = Output()
+        pool = multiprocessing.Pool(5)
+        scan = Scan(ip, verbose)
+        for port in scan.tcp():
+            pool.map(tcp_worker, ((ip, port, firmware, verbose, output),))
+        #for port in  scan.udp():
+        #    output.write('scan', 'Udp: %s\n' % port)
+        #    poll.map(udp_worker, ((ip, port, firmware, verbose, output),))
+        if fname:
+            output.file(fname)
+        else:
+            output.stdout()
+
+if __name__ == '__main__':
+    parse = argparse.ArgumentParser(description="tries to automate some\
+    of the processes I take to look for vulnerbilites in routers")
+    parse.add_argument('ip', help='target ip address')
+    parse.add_argument('-f', help='firmware of target device')
+    parse.add_argument('-o', help='output file')
+    parse.add_argument('-v', help='verbose', action='store_true')
+    args = parse.parse_args()
+    if args.v:
+        args.v = verbose
+    else:
+        args.v = silent
+    fuzz = Fuzz()
+    fuzz.start(args.ip, args.f, args.v, args.o)

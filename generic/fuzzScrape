@@ -25,13 +25,14 @@ class Scrape:
         except: pass
 
 if __name__=='__main__':
-    parse = argparse.ArgumentParser()
+    parse = argparse.ArgumentParser(description="fuzzScrape looks for \
+    files on the internet with extentions that meets its criteria")
     parse.add_argument('output', help='output directory',
         metavar=('dir'))
     parse.add_argument('-r', help='perform N rounds (DEFAULT: 1)',
         dest='rounds', metavar=('rnds'), default=1)
     parse.add_argument('-d', help='dictionary (DEFAULT: lib/dict.txt)',
-        default='lib/dict.txt', dest='dictionary', metavar=('dict')) 
+        default='lib/dict.txt', dest='dictionary', metavar=('dict'))
     parse.add_argument('-c', nargs='*', help='combine collects',
         metavar=('dir'), dest='combine')
     if len(sys.argv) < 2:

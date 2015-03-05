@@ -1,0 +1,48 @@
+#!/usr/bin/env python
+import sys
+import argparse
+import requests
+from subprocess import Popen, PIPE
+
+class Http:
+    def __init__(self, ip, port, httpd):
+        self.ip = ip
+        self.port = port
+        self.httpd = httpd
+
+    def find_unauth_urls(self):
+        results = {}
+        p = Popen(['strings', self.httpd], stdout=PIPE, stderr=PIPE)
+        for line in p.communicate()[0].split('\n'):
+            url = None
+            line = line.rstrip('\r\n')
+            if line.startswith('/'):
+                url = 'http://%s:%s%s' % (self.ip, self.port, line)
+            elif line.endswith('.asp'):
+                url = 'http://%s:%s/%s' % (self.ip, self.port, line)
+            elif line.endswith('.cgi'):
+                url = 'http://%s:%s/%s' % (self.ip, self.port, line)
+            elif line.endswith('.htm'):
+                url = 'http://%s:%s/%s' % (self.ip, self.port, line)
+            if url is not None:
+                try:
+                    print url
+                    http = requests.get(url, timeout=3)
+                    results[http.content] = url
+                except:pass
+        for urls in results:
+            yield results[urls]
+
+
+if __name__ == '__main__':
+    parse = argparse.ArgumentParser()
+    parse.add_argument('ip', help='target ip address')
+    parse.add_argument('port', help='target port number')
+    parse.add_argument('file', help='path to extracted firmware of target')
+    parse.add_argument('output', help='output file')
+    args = parse.parse_args()
+    http = Http(args.ip, args.port, args.file)
+    f = open(args.output, 'w+')
+    for path in http.find_unauth_urls():
+        f.write('%s\n' % path)
+

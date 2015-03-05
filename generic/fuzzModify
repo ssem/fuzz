@@ -23,7 +23,7 @@ class Modify:
             for line in f:
                 n = random.randint(0, len(line))
                 x = random.randint(0, 6)
-                mod = line[:n] + ''.join(random.sample(self.chars, x)) + line[n:] 
+                mod = line[:n] + ''.join(random.sample(self.chars, x)) + line[n:]
                 f[count] = mod
                 count += 1
             r = open(filename + '_1', 'w')
@@ -37,7 +37,7 @@ class Modify:
             count = 0
             for line in f:
                 n = random.randint(0, len(line))
-                mod = line[:n] + str(hex(random.randint(0, 10000))) + line[n:] 
+                mod = line[:n] + str(hex(random.randint(0, 10000))) + line[n:]
                 f[count] = mod
                 count += 1
             r = open(filename + '_2', 'w')
@@ -52,7 +52,7 @@ class Modify:
             for line in f:
                 n = random.randint(0, len(line))
                 x = random.randint(n, len(line))
-                f[count] = line[:n] + line[x:] 
+                f[count] = line[:n] + line[x:]
                 count += 1
             r = open(filename + '_3', 'w')
             for line in f:
@@ -60,7 +60,8 @@ class Modify:
             r.close()
 
 if __name__ == '__main__':
-    parse = argparse.ArgumentParser()
+    parse = argparse.ArgumentParser(description="fuzzModify performs\
+    modifications to files collected by scrape")
     parse.add_argument('path', help='input directory',
         metavar=('path'))
     parse.add_argument('-1', action='store_true', help='add chars',

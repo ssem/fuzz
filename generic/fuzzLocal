@@ -5,7 +5,7 @@ import time
 import string
 import argparse
 import itertools
-import multiprocessing 
+import multiprocessing
 from subprocess import Popen, PIPE
 
 def worker((cmd, output, timeout)):
@@ -29,7 +29,7 @@ def worker((cmd, output, timeout)):
         print 'Fatal %s' % ' '.join(cmd)
 
 class Fuzz:
-    def start(self, output, cmd, timeout, threads, path, chars, minC, maxC): 
+    def start(self, output, cmd, timeout, threads, path, chars, minC, maxC):
         f = open(output, 'w+')
         f.close()
         pool = multiprocessing.Pool(int(threads))
@@ -44,7 +44,7 @@ class Fuzz:
             for f in files:
                 file_name = os.path.join(path, f)
                 yield [cmd.replace('#p', file_name).split(' '), output, timeout]
-    
+
     def _char_cmds(self, cmd, output, timeout, chars, minC, maxC):
         for x in xrange(int(minC), int(maxC)):
             for y in itertools.permutations(chars, x):
@@ -74,5 +74,5 @@ if __name__ == '__main__':
     if args.s:
         chars += string.punctuation + string.whitespace
     fuzz = Fuzz()
-    fuzz.start(args.output, args.cmd, args.timeout, args.threads, args.p, chars, 
+    fuzz.start(args.output, args.cmd, args.timeout, args.threads, args.p, chars,
         args.minC, args.maxC)

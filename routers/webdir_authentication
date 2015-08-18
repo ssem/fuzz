@@ -1,0 +1,57 @@
+#!/usr/bin/env python
+import os
+import sys
+import argparse
+import requests
+
+class Http:
+    def _find_possible_web_dirs(self, firmware):
+        web_dirs = {}
+        for root, dirs, files in os.walk(firmware):
+           for f in files:
+                if f.endswith('.htm') or f.endswith('.html') \
+                or f.endswith('.asp') or f.endswith('js') \
+                or f.endswith('.ha') or f.endswith('.css') \
+                or f.endswith('.cgi') or f.startswith('index.'):
+                    web_dirs[root] = ''
+        for web_dir in web_dirs:
+            yield web_dir
+
+    def _walk_web_dir(self, web_dir):
+        for root, dirs, files in os.walk(web_dir):
+            for f in files:
+                base = os.path.join(root[len(web_dir):], f).lstrip("/")
+                yield "/%s/%s" % (os.path.basename(web_dir), base)
+                yield "/%s" % base
+
+    def _check_if_unauthenticated(self, url):
+        try:
+            http = requests.get(url, timeout=3)
+            if http.status_code >= 200 and http.status_code < 300:
+                return True
+        except:pass
+
+    def run(self, ip, port, firmware):
+        if int(port) == 443:prefix = "https://"
+        else:prefix = "http://"
+        for web_dir in self._find_possible_web_dirs(firmware):
+            for path in self._walk_web_dir(web_dir):
+                url = "%s%s:%s%s" % (prefix, ip, port, path)
+                if self._check_if_unauthenticated(url):
+                    sys.stdout.write("\033[92m[+]\033[1;m %s\n" % url)
+                    yield url
+                else:
+                    sys.stdout.write("\033[91m[-]\033[1;m %s\n" % url)
+
+if __name__ == '__main__':
+    parse = argparse.ArgumentParser(description="looks for web directories in extracted firmware and attempts each page")
+    parse.add_argument('ip', help='target ip address')
+    parse.add_argument('port', help='target port number')
+    parse.add_argument('firmware', help='path to extracted www file')
+    parse.add_argument('output', help='output file')
+    args = parse.parse_args()
+    f = open(args.output, "w+")
+    http = Http()
+    for url in http.run(args.ip, args.port, args.firmware):
+        f.write("%s\n" % url)
+    f.close()
